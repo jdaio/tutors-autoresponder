@@ -1,0 +1,39 @@
+{
+    "name": "tutors-autoresponder",
+    "description": "Automated responses for Tutors.com messages.",
+    "version": "1.0.0",
+    "keywords": [
+        "automation",
+        "bot",
+        "gmail",
+        "gmail-api",
+        "googleapis",
+        "javascript",
+        "nodejs"
+    ],
+    "homepage": "https://github.com/jdaio/tutors-autoresponder#readme",
+    "author": {
+        "name": "Jamal Ali-Mohammed",
+        "email": "jamal@digitalheat.co",
+        "url": "https://jdaio.github.io/"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/jdaio/tutors-autoresponder.git"
+    },
+    "bugs": {
+        "url": "https://github.com/jdaio/tutors-autoresponder/issues"
+    },
+    "license": "GPL-3.0-or-later",
+    "engines": {
+        "node": ">=12",
+        "npm": ">=6"
+    },
+    "devDependencies": {},
+    "dependencies": {},
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    }
+}
