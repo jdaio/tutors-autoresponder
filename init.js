@@ -80,7 +80,7 @@ function sendMessages(urlArray = [], count = 0) {
                 })
                 .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteSkype)
                     .wait(1000)
-                    .insert('#quote-message', `Hi ${result.name},\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?\n\nThanks,\nAdam`)
+                    .insert('#quote-message', `Dear ${result.name},\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson}/hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype}/hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?`)
                     .wait(1000)
                     .click('#send-quote')
                     .wait('#template-content'));
@@ -91,40 +91,52 @@ function sendMessages(urlArray = [], count = 0) {
             .url()
             .then((url) => {
                 if (url === 'https://tutors.com/pros/requests') {
-                    if (document.querySelectorAll('.pro-requests .request-box')
-                        .length > 0) {
-                        return nightmare
-                            .click('.pro-requests .request-box:first-child a.request-head')
-                            .wait('#send-quote')
-                            .then(() => nightmare.wait(1000)
-                                .evaluate(() => {
-                                    const student = {
-                                        name: '',
-                                        city: '',
-                                    };
-
-                                    // Get the student name and reduce to the first name only.
-                                    const studentName = document.querySelector('.client-lead-customer .media-heading')
-                                        .innerText;
-                                    student.name = studentName.replace(/( [A-Z]\.)/, '');
-
-                                    // Get the student city and reduce it to the city name only (hopefully).
-                                    const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
-                                        .innerText;
-                                    student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
-
-                                    return student;
-                                })
-                                .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteSkype)
-                                    .wait(1000)
-                                    .insert('#quote-message', `Dear ${result.name},\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?`)
-                                    .wait(1000)
-                                    .click('#send-quote')
-                                    .wait('#template-content')));
-                    }
-                } else {
                     return nightmare
-                        .then(() => sendMessages(subArray, subCount + 1));
+                        .evaluate(() => {
+                            let existingRequests = false;
+                            const requestBoxes = document.querySelectorAll('.pro-requests .request-box');
+
+                            if (requestBoxes.length > 0) {
+                                existingRequests = true;
+                            }
+
+                            return existingRequests;
+                        })
+                        .then((existing) => {
+                            if (existing) {
+                                return nightmare
+                                    .click('.pro-requests .request-box:first-child a.request-head')
+                                    .wait('#send-quote')
+                                    .then(() => nightmare.wait(1000)
+                                        .evaluate(() => {
+                                            const student = {
+                                                name: '',
+                                                city: '',
+                                            };
+
+                                            // Get the student name and reduce to the first name only.
+                                            const studentName = document.querySelector('.client-lead-customer .media-heading')
+                                                .innerText;
+                                            student.name = studentName.replace(/( [A-Z]\.)/, '');
+
+                                            // Get the student city and reduce it to the city name only (hopefully).
+                                            const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
+                                                .innerText;
+                                            student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+
+                                            return student;
+                                        })
+                                        .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteSkype)
+                                            .wait(1000)
+                                            .insert('#quote-message', `Dear ${result.name},\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson}/hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype}/hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?`)
+                                            .wait(1000)
+                                            .click('#send-quote')
+                                            .wait('#template-content')));
+                            }
+
+                            return nightmare
+                                .then(() => sendMessages(subArray, subCount + 1));
+                        });
                 }
             });
     }
