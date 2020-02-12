@@ -122,6 +122,8 @@ function sendMessages(urlArray = [], count = 0) {
                                     .wait('#template-content')));
                     }
                 }
+
+                return false;
             });
     }
 
