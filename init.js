@@ -57,7 +57,7 @@ const nightmare = new Nightmare({
 });
 
 function sendMessages(urlArray = [], count = 0) {
-    function formFill(result) {
+    function formFill(result, subArray, subCount) {
         if (result) {
             return nightmare.wait(1000)
                 .evaluate(() => {
@@ -87,6 +87,7 @@ function sendMessages(urlArray = [], count = 0) {
         }
 
         return nightmare
+            .wait(5000)
             .url()
             .then((url) => {
                 if (url === 'https://tutors.com/pros/requests') {
@@ -121,16 +122,17 @@ function sendMessages(urlArray = [], count = 0) {
                                     .click('#send-quote')
                                     .wait('#template-content')));
                     }
+                } else {
+                    return nightmare
+                        .then(() => sendMessages(subArray, subCount + 1));
                 }
-
-                return false;
             });
     }
 
     return nightmare
         .goto(urlArray[count])
         .exists('#send-quote')
-        .then((result) => formFill(result))
+        .then((result) => formFill(result, urlArray, count))
         .then(() => {
             if (count < urlArray.length) {
                 return sendMessages(urlArray, count + 1);
