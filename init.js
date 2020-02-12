@@ -118,7 +118,7 @@ async function init() {
     }
 
     await nightmare
-        .then(() => sendMessages(requestLinks))
+        .then(() => sendMessages(requestLinks, 4))
         .then(() => nightmare.end(() => console.log('Links successfully completed.')));
 }
 
