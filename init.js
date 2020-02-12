@@ -57,34 +57,78 @@ const nightmare = new Nightmare({
 });
 
 function sendMessages(urlArray = [], count = 0) {
+    function formFill(result) {
+        if (result) {
+            return nightmare.wait(1000)
+                .evaluate(() => {
+                    const student = {
+                        name: '',
+                        city: '',
+                    };
+
+                    // Get the student name and reduce to the first name only.
+                    const studentName = document.querySelector('.client-lead-customer .media-heading')
+                        .innerText;
+                    student.name = studentName.replace(/( [A-Z]\.)/, '');
+
+                    // Get the student city and reduce it to the city name only (hopefully).
+                    const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
+                        .innerText;
+                    student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+
+                    return student;
+                })
+                .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteSkype)
+                    .wait(1000)
+                    .insert('#quote-message', `Hi ${result.name},\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?\n\nThanks,\nAdam`)
+                    .wait(1000)
+                    .click('#send-quote')
+                    .wait('#template-content'));
+        }
+
+        return nightmare
+            .url()
+            .then((url) => {
+                if (url === 'https://tutors.com/pros/requests') {
+                    if (document.querySelectorAll('.pro-requests .request-box')
+                        .length > 0) {
+                        return nightmare
+                            .click('.pro-requests .request-box:first-child a.request-head')
+                            .wait('#send-quote')
+                            .then(() => nightmare.wait(1000)
+                                .evaluate(() => {
+                                    const student = {
+                                        name: '',
+                                        city: '',
+                                    };
+
+                                    // Get the student name and reduce to the first name only.
+                                    const studentName = document.querySelector('.client-lead-customer .media-heading')
+                                        .innerText;
+                                    student.name = studentName.replace(/( [A-Z]\.)/, '');
+
+                                    // Get the student city and reduce it to the city name only (hopefully).
+                                    const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
+                                        .innerText;
+                                    student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+
+                                    return student;
+                                })
+                                .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteSkype)
+                                    .wait(1000)
+                                    .insert('#quote-message', `Hi ${result.name},\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?\n\nThanks,\nAdam`)
+                                    .wait(1000)
+                                    .click('#send-quote')
+                                    .wait('#template-content')));
+                    }
+                }
+            });
+    }
+
     return nightmare
         .goto(urlArray[count])
-        .wait(2000)
-        .evaluate(() => {
-            const student = {
-                name: '',
-                city: '',
-            };
-
-            // Get the student name and reduce to the first name only.
-            const studentName = document.querySelector('.client-lead-customer .media-heading')
-                .innerText;
-            student.name = studentName.replace(/( [A-Z]\.)/, '');
-
-            // Get the student city and reduce it to the city name only (hopefully).
-            const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
-                .innerText;
-            student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
-
-            return student;
-        })
-        .then((result) => nightmare.wait(1000)
-            .insert('#quote-price', settings.defaultQuoteSkype)
-            .wait(1000)
-            .insert('#quote-message', `Hi ${result.name},\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?\n\nThanks,\nAdam`)
-            .wait(1000)
-            .click('#send-quote')
-            .wait(5000))
+        .exists('#send-quote')
+        .then((result) => formFill(result))
         .then(() => {
             if (count < urlArray.length) {
                 return sendMessages(urlArray, count + 1);
@@ -93,8 +137,6 @@ function sendMessages(urlArray = [], count = 0) {
             if (count === urlArray.length) {
                 return false;
             }
-
-            return false;
         });
 }
 
@@ -118,7 +160,7 @@ async function init() {
     }
 
     await nightmare
-        .then(() => sendMessages(requestLinks, 4))
+        .then(() => sendMessages(requestLinks))
         .then(() => nightmare.end(() => console.log('Links successfully completed.')));
 }
 
