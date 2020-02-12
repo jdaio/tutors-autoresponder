@@ -23,8 +23,8 @@
 import {
     parse
 } from 'node-html-parser';
-import gmail from 'gmail-tester';
 import Nightmare from 'nightmare';
+import gmail from './components/gmail-tester/gmail-tester';
 import settings from './settings';
 
 /**
@@ -50,12 +50,55 @@ const checkEmails = () => gmail.get_messages(
  * -----------------------------------------------------------------------------
  */
 
+const nightmare = new Nightmare({
+    show: true,
+    maxHeight: 1080,
+    maxWidth: 1920,
+});
+
+function sendMessages(urlArray = [], count = 0) {
+    return nightmare
+        .goto(urlArray[count])
+        .wait(2000)
+        .evaluate(() => {
+            const student = {
+                name: '',
+                city: '',
+            };
+
+            // Get the student name and reduce to the first name only.
+            const studentName = document.querySelector('.client-lead-customer .media-heading')
+                .innerText;
+            student.name = studentName.replace(/( [A-Z]\.)/, '');
+
+            // Get the student city and reduce it to the city name only (hopefully).
+            const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
+                .innerText;
+            student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+
+            return student;
+        })
+        .then((result) => nightmare.wait(1000)
+            .insert('#quote-price', settings.defaultQuoteSkype)
+            .wait(1000)
+            .insert('#quote-message', `Hi ${result.name},\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?\n\nThanks,\nAdam`)
+            .wait(1000)
+            .click('#send-quote')
+            .wait(5000))
+        .then(() => {
+            if (count < urlArray.length) {
+                return sendMessages(urlArray, count + 1);
+            }
+
+            if (count === urlArray.length) {
+                return false;
+            }
+
+            return false;
+        });
+}
+
 async function init() {
-    const nightmare = new Nightmare({
-        show: true,
-        maxHeight: 1080,
-        maxWidth: 1920,
-    });
     const retrievedEmails = await checkEmails();
     const requestLinks = [];
 
@@ -74,15 +117,9 @@ async function init() {
         console.log('Emails have been retrieved and links stored.');
     }
 
-    /* Set Variables for New Student Info */
     await nightmare
-        .goto(requestLinks[0])
-        .wait('#send-quote')
-        .wait(3000)
-        .insert('#quote-price', '60')
-        .insert('#quote-message', 'Your typed message will go here.')
-        .wait(15000)
-        .end();
+        .then(() => sendMessages(requestLinks))
+        .then(() => nightmare.end(() => console.log('Links successfully completed.')));
 }
 
 init();

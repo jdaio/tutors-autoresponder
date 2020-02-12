@@ -10,7 +10,8 @@ module.exports = {
     credentialName: 'client_secret.json',
     tokenDir: './credentials/token',
     tokenName: 'gmail_token.json',
-    scopes: [
-        'https://www.googleapis.com/auth/gmail.readonly',
-    ],
+
+    // Default Quote Price, Omit the `$`.
+    defaultQuoteInPerson: '100',
+    defaultQuoteSkype: '60',
 };
