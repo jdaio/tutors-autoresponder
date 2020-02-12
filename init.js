@@ -117,7 +117,7 @@ function sendMessages(urlArray = [], count = 0) {
                                 })
                                 .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteSkype)
                                     .wait(1000)
-                                    .insert('#quote-message', `Hi ${result.name},\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?\n\nThanks,\nAdam`)
+                                    .insert('#quote-message', `Dear ${result.name},\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\nWe offer in-person tutoring in ${result.city} for $${settings.defaultQuoteInPerson} an hour, and Skype tutoring at the more affordable rate of $${settings.defaultQuoteSkype} an hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?`)
                                     .wait(1000)
                                     .click('#send-quote')
                                     .wait('#template-content')));
