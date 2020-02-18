@@ -60,6 +60,8 @@ async function _get_recent_email(credentials_json, token_path, options = {}) {
     );
     for (const gmail_email of gmail_emails) {
         const email = {
+            id: gmail_email.id,
+            labels: gmail_email.labelIds,
             from: _get_header("From", gmail_email.payload.headers),
             subject: _get_header("Subject", gmail_email.payload.headers),
             receiver: _get_header("Delivered-To", gmail_email.payload.headers),
@@ -86,23 +88,27 @@ async function _get_recent_email(credentials_json, token_path, options = {}) {
                         break;
                 }
             } else {
-                let body_part = gmail_email.payload.parts.find(
-                    p => p.mimeType === "text/html"
-                );
-                if (body_part) {
-                    email_body.html = Buffer.from(body_part.body.data, "base64")
-                        .toString(
-                            "utf8"
-                        );
-                }
-                body_part = gmail_email.payload.parts.find(
-                    p => p.mimeType === "text/plain"
-                );
-                if (body_part) {
-                    email_body.text = Buffer.from(body_part.body.data, "base64")
-                        .toString(
-                            "utf8"
-                        );
+                let {
+                    parts
+                } = gmail_email.payload;
+                while (parts.length) {
+                    let part = parts.shift();
+
+                    if (part.parts) {
+                        parts = parts.concat(part.parts);
+                    }
+
+                    if (part.mimeType === "text/plain") {
+                        email_body.text = Buffer.from(part.body.data, "base64")
+                            .toString(
+                                "utf8"
+                            );
+                    } else if (part.mimeType === "text/html") {
+                        email_body.html = Buffer.from(part.body.data, "base64")
+                            .toString(
+                                "utf8"
+                            );
+                    }
                 }
             }
 
@@ -164,6 +170,26 @@ async function __check_inbox(credentials_json, token_path, options = {}) {
     }
 }
 
+async function archive_message(credentials_json, token_path, message_id) {
+    const content = fs.readFileSync(credentials_json);
+    const oAuth2Client = await gmail.authorize(JSON.parse(content), token_path);
+    const gmail_client = google.gmail({
+        version: "v1",
+        oAuth2Client,
+    });
+
+    const archivedEmail = await gmail_client.users.messages.modify({
+        auth: oAuth2Client,
+        userId: 'me',
+        id: message_id,
+        resource: {
+            removeLabelIds: ['UNREAD', 'INBOX'],
+        },
+    });
+
+    return archivedEmail;
+}
+
 /**
  * Poll inbox.
  *
@@ -193,7 +219,7 @@ async function check_inbox(
 ) {
     if (typeof options !== "object") {
         console.error(
-            "[gmail-tester] This functionality is absolete! Please pass all params in options object!"
+            "[gmail-tester] This functionality is absolete! Please pass all params of check_inbox() in options object."
         );
         process.exit(1);
     }
@@ -207,6 +233,11 @@ async function check_inbox(
  * @param {string} token_path - Path to token json file.
  * @param {Object} options
  * @param {boolean} options.include_body - Return message body string.
+ * @param {string} options.from - Filter on the email address of the receiver.
+ * @param {string} options.to - Filter on the email address of the sender.
+ * @param {string} options.subject - Filter on the subject of the email.
+ * @param {Object} options.before - Date. Filter messages received _after_ the specified date.
+ * @param {Object} options.after - Date. Filter messages received _before_ the specified date.
  */
 async function get_messages(credentials_json, token_path, options) {
     try {
@@ -222,6 +253,7 @@ async function get_messages(credentials_json, token_path, options) {
 }
 
 module.exports = {
+    archive_message,
     check_inbox,
-    get_messages
+    get_messages,
 };

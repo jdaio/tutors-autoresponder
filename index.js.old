@@ -1,0 +1,24 @@
+const path = require("path");
+const gmail = require("./components/gmail-tester/gmail-tester");
+const email = () => gmail.get_messages(
+    path.resolve(__dirname, "client_secret.json"), // Assuming credentials.json is in the current directory.
+    path.resolve(__dirname, "gmail_token.json"), // Look for gmail_token.json in the current directory (if it doesn't exists, it will be created by the script).
+    {
+        subject: "Tutoring for",
+        from: "support@tutors.com",
+        to: "",
+        include_body: true
+    }
+);
+
+async function init() {
+    const emails = await email();
+
+    if (emails) {
+        console.log(emails);
+    } else {
+        console.log("Email was not found!");
+    }
+}
+
+init();
