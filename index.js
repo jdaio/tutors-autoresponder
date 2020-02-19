@@ -1,6 +1,6 @@
 /**
  * -----------------------------------------------------------------------------
- * Tutors.com / Gmail Autoresponder
+ * Tutors.com Autoresponder
  *
  * Licensed under GPL v3.0:
  * https://github.com/jdaio/tutors-autoresponder/blob/master/LICENSE
@@ -76,7 +76,11 @@ function* init() {
         return result;
     }
 
+    // Establish success marker for script.
+    let success = false;
+
     for (let i = 0; i < emails.length; i + 1) {
+        success = false;
         const emailLinks = parse(emails[i].body.html)
             .querySelectorAll('a');
         let targetLink = '';
@@ -125,6 +129,9 @@ function* init() {
                     .click('#send-quote')
                     .wait('#template-content')
                     .wait(2000));
+
+            // If finished for this case, mark it as successful.
+            success = true;
         } else if (!(isQuote) && (nightmare.url() !== 'https://tutors.com/pros/requests')) {
             yield nightmare
                 .click('#header-requests a')
@@ -184,6 +191,9 @@ function* init() {
                         }
                     }
                 });
+
+            // If finished for this case, mark it as successful.
+            success = true;
         }
 
         if (nightmare.url() === 'https://tutors.com/pros/requests') {
@@ -242,19 +252,42 @@ function* init() {
                         }
                     }
                 });
+
+            // If finished for this case, mark it as successful.
+            success = true;
         }
 
-        yield gmail.archive_message(
-            CLIENT_SECRET,
-            CLIENT_TOKEN,
-            emails[0].id,
-        );
+        if (success) {
+            yield gmail.archive_message(
+                CLIENT_SECRET,
+                CLIENT_TOKEN,
+                emails[0].id,
+            );
+        } else {
+            break;
+        }
     }
 
     yield nightmare.end();
 
-    // Return a result.
-    const result = 'All emails have been successfully handled and messages replied to!';
+    if (success) {
+        // Return a result.
+        const result = 'All emails have been successfully handled and messages replied to!';
+
+        return result;
+    }
+
+    sendmail({
+        from: settings.serverEmail,
+        to: settings.adminEmail,
+        subject: 'A tutors script needs your attention.',
+        html: 'Mail of test sendmail.',
+    }, (err, reply) => {
+        console.log(err && err.stack);
+        console.dir(reply);
+    });
+
+    const result = 'An unexpected page was encountered (either a website server error, payment page, or otherwise). An email has been sent to the owner.';
 
     return result;
 }

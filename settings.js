@@ -5,6 +5,10 @@
  */
 
 module.exports = {
+    // Admin Info
+    serverEmail: 'server@123.45.67.89',
+    adminEmail: 'email@example.com',
+
     // Omit Trailing Slashes
     credentialDir: './credentials',
     credentialName: 'client_secret.json',
