@@ -4,29 +4,51 @@
  * -----------------------------------------------------------------------------
  */
 
-import {
-    CronJob
-} from 'cron';
-import fs from 'fs';
-import {
-    google
-} from 'googleapis';
-import Nightmare from 'nightmare';
-import {
+// Import required node modules.
+const fs = require('fs');
+const Nightmare = require('nightmare');
+const {
     parse
-} from 'node-html-parser';
-import sendmail from 'sendmail';
-import vo from 'vo';
-import gmail from './components/gmail-tester/gmail-tester';
-import settings from './settings';
+} = require('node-html-parser');
+const nodemailer = require('nodemailer');
+const vo = require('vo');
 
-const CLIENT_SECRET = `${settings.credentialDir}/${settings.credentialName}`;
-const CLIENT_TOKEN = `${settings.credentialDir}/token/token.json`;
+// Import required components.
+const gmail = require('./components/gmail-tester/gmail-tester.js');
+
+// Import script settings.
+const settings = require('./settings.js');
+
+// Setup constants for JSON keys.
+const CLIENT_SECRET = `${settings.credentialDir}/google/${settings.credentialGoogle}`;
+const CLIENT_TOKEN = `${settings.credentialDir}/google/token/token.json`;
+const CLIENT_SMTP = `${settings.credentialDir}/smtp/${settings.credentialSmtp}`;
 
 
 /**
  * -----------------------------------------------------------------------------
+ * Setup SMTP Email Connectivity
+ * -----------------------------------------------------------------------------
+ */
+
+// Parse SMTP JSON credentials.
+const clientSmtp = JSON.parse(fs.readFileSync(CLIENT_SMTP));
+
+// Instantiate nodemailer.
+const mailTransport = nodemailer.createTransport({
+    host: clientSmtp.smtpHost,
+    port: clientSmtp.smtpPort,
+    auth: {
+        user: clientSmtp.auth.email,
+        pass: clientSmtp.auth.password,
+    },
+});
+
+/**
+ * -----------------------------------------------------------------------------
  * Check the user email inbox.
+ *
+ * @returns {array} Returns array of messages matching query.
  * -----------------------------------------------------------------------------
  */
 
@@ -44,45 +66,57 @@ const getEmails = () => gmail.get_messages(
 /**
  * -----------------------------------------------------------------------------
  * Initialization
+ *
+ * @description Runs the script to check for emails from Tutors for new requests
+ *              and replies to them and an other outstanding requests before
+ *              marking the email as read and/or emailing the admin with any
+ *              errors.
+ *
+ * @returns {string} Message on whether the operation was successful or not.
  * -----------------------------------------------------------------------------
  */
 
 function* run() {
-    // Initialize Nightmare
+    // Create new Nightmare instance.
     const nightmare = new Nightmare({
         show: true,
         maxHeight: 1080,
         maxWidth: 1920,
     });
 
-    // Check for emails.
+    // Check active inbox for new emails from Tutors.
     const emails = yield getEmails();
 
-    // If emails aren't found, exit the process.
+    // If no emails are found, exit the process.
     if (!Array.isArray(emails) || !emails.length) {
         const result = 'No emails were found, the current process has ended.';
         return result;
     }
 
-    // Set marker for task completion.
+    // Set up markers for task status.
     let success = false;
+    let needsPayment = false;
 
-    for (let i = 0; i < emails.length; i + 1) {
-
+    // Loop through each email in the returned array.
+    for (let i = 0; i < emails.length; i++) {
+        // Get all links in the email body.
         const emailLinks = parse(emails[i].body.html)
             .querySelectorAll('a');
         let targetLink = '';
 
+        // Find link that leads to the request page.
         emailLinks.forEach((link) => {
             if (link.rawText === 'View Request') {
                 targetLink = link.attributes.href;
             }
         });
 
+        // Send Nightmare to that link.
         yield nightmare
             .goto(targetLink)
             .wait(3000);
 
+        // Check for the existence of the `Send Quote` button.
         const isQuote = yield nightmare.exists('#send-quote');
 
         if (isQuote) {
@@ -114,15 +148,28 @@ function* run() {
                     return contact;
                 })
                 .then((result) => nightmare
+                    .wait(3000)
+                    .wait('#quote-price')
                     .insert('#quote-price', result.defaultQuoteRemote)
+                    .wait(1000)
+                    .wait('#quote-message')
                     .insert('#quote-message', result.message)
-                    .wait(2000)
+                    .wait(1000)
                     .click('#send-quote')
-                    .wait('#template-content')
-                    .wait(2000));
+                    .wait(4000)
+                    .url()
+                    .then(url => {
+                        if (url === 'https://tutors.com/pros/requests') {
+                            success = true;
+                            return success;
+                        }
 
-            // Flip success marker if finished.
-            success = true;
+                        if (url === 'https://tutors.com/pros/payment') {
+                            success = false;
+                            needsPayment = true;
+                            return success;
+                        }
+                    }));
         } else if (!(isQuote) && (nightmare.url() !== 'https://tutors.com/pros/requests')) {
             yield nightmare
                 .click('#header-requests a')
@@ -175,18 +222,38 @@ function* run() {
 
                                     return contact;
                                 })
-                                .then((result) => nightmare.insert('#quote-price', result.defaultQuoteRemote)
+                                .then((result) => nightmare
+                                    .wait(3000)
+                                    .wait('#quote-price')
+                                    .insert('#quote-price', result.defaultQuoteRemote)
+                                    .wait(1000)
+                                    .wait('#quote-message')
                                     .insert('#quote-message', result.message)
-                                    .wait(2000)
+                                    .wait(1000)
                                     .click('#send-quote')
-                                    .wait('#template-content')
-                                    .wait(2000));
+                                    .wait(4000)
+                                    .url()
+                                    .then(url => {
+                                        if (url === 'https://tutors.com/pros/requests') {
+                                            success = true;
+                                            return success;
+                                        }
+
+                                        if (url === 'https://tutors.com/pros/payment') {
+                                            console.log('Payment page.');
+                                            success = false;
+                                            needsPayment = true;
+
+                                            return success;
+                                        }
+                                    }));
                         }
+                    } else {
+                        success = true;
+
+                        return true;
                     }
                 });
-
-            // Flip success marker if finished.
-            success = true;
         }
 
         if (nightmare.url() === 'https://tutors.com/pros/requests') {
@@ -238,51 +305,99 @@ function* run() {
 
                                     return contact;
                                 })
-                                .then((result) => nightmare.insert('#quote-price', result.defaultQuoteRemote)
+                                .then((result) => nightmare
+                                    .wait(3000)
+                                    .wait('#quote-price')
+                                    .insert('#quote-price', result.defaultQuoteRemote)
+                                    .wait(1000)
+                                    .wait('#quote-message')
                                     .insert('#quote-message', result.message)
-                                    .wait(2000)
+                                    .wait(1000)
                                     .click('#send-quote')
-                                    .wait('#template-content')
-                                    .wait(2000));
+                                    .wait(4000)
+                                    .url()
+                                    .then(url => {
+                                        if (url === 'https://tutors.com/pros/requests') {
+                                            success = true;
+
+                                            return success;
+                                        }
+
+                                        if (url === 'https://tutors.com/pros/payment') {
+                                            success = false;
+                                            needsPayment = true;
+
+                                            return success;
+                                        }
+                                    }));
                         }
+                    } else {
+                        success = true;
+
+                        return true;
                     }
                 });
-
-            // Flip success marker if finished.
-            success = true;
         }
 
         if (success) {
-            yield gmail.archive_message(
+            // Archive this email if the Tutors request handling was successful.
+            gmail.archive_message(
                 CLIENT_SECRET,
                 CLIENT_TOKEN,
                 emails[0].id,
             );
         } else {
+            if (needsPayment) {
+                // Send notification email if a payment is required.
+                const notificationEmail = {
+                    // Sender address MUST match the email of SMTP connection.
+                    from: clientSmtp.auth.email,
+
+                    // Set the email to be set to the script administrator.
+                    to: settings.adminEmail,
+
+                    // Set the subject of the email.
+                    subject: 'The Tutors.com Script Needs Your Attention',
+
+                    // Set the text of the email. `html:` may also be used.
+                    text: `Payment is needed on one of your accounts related to ${clientSmtp.auth.email}.`,
+                    // html: '<p>Some message here...</p>',
+                };
+
+                // Send the built email.
+                mailTransport.sendMail(notificationEmail, (err, info) => {
+                    if (err) {
+                        console.log(err);
+                    } else {
+                        console.log(info);
+                    }
+                });
+            }
+
+            // Exit if there's an error or the submission isn't successful.
             break;
         }
     }
 
+    // End Nightmare after the loopm is successfully run.
     yield nightmare.end();
 
+    // Result if the script ran without a problem.
     if (success) {
-        // Return a result.
         const result = 'All emails have been successfully handled and messages replied to!';
 
         return result;
     }
 
-    sendmail({
-        from: settings.serverEmail,
-        to: settings.adminEmail,
-        subject: 'A tutors script needs your attention.',
-        html: 'Mail of test sendmail.',
-    }, (err, reply) => {
-        console.log(err && err.stack);
-        console.dir(reply);
-    });
+    // Result if the script ran into the paywall.
+    if (needsPayment) {
+        const result = 'Payment is necessary. The admin has been notified.';
 
-    const result = 'There was an issue with the current round of email (payment required, server error, etc.). The admin has been notified.';
+        return result;
+    }
+
+    // Result if the script had another exception.
+    const result = 'There was an issue with the process. This likely was not related to the script, but with the Tutors site itself.';
 
     return result;
 }
@@ -291,20 +406,16 @@ function* run() {
 /**
  * -----------------------------------------------------------------------------
  * Runtime
+ *
+ * @description Runs the script using the VO control library.
  * -----------------------------------------------------------------------------
  */
 
-// Script runs periodically
-const job = new CronJob('*/10 * * * *', vo(run)((err, result) => {
-    console.log('---------------------');
-    console.log('Checking emails for new Tutors messages to reply to...');
+console.log('---------------------');
+console.log('Checking emails for new Tutors messages to reply to...');
 
+vo(run)((err, result) => {
     if (err) throw err;
 
     console.log(result);
-}), () => {
-    console.log('Finished running the job!');
-    console.log('---------------------');
-}, false, 'America/New_York', null, true);
-
-job.start();
+});

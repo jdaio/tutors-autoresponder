@@ -13,6 +13,8 @@
  * -----------------------------------------------------------------------------
  */
 
+// Use ES6 modules for imports
 require = require('esm')(module);
 
-module.exports = require('./main');
+// Import main script
+module.exports = require('./main.js');

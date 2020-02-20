@@ -70,4 +70,4 @@ wpcs/
 /vendor/
 
 # Credentials
-credentials/
+credentials/google/*.json
