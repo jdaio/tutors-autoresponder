@@ -1,6 +1,6 @@
 /**
  * -----------------------------------------------------------------------------
- * Tutors.com Autoresponder
+ * Tutors.com / Gmail Autoresponder
  *
  * Licensed under GPL v3.0:
  * https://github.com/jdaio/tutors-autoresponder/blob/master/LICENSE
@@ -20,6 +20,10 @@
  * -----------------------------------------------------------------------------
  */
 
+import {
+    CronJob
+} from 'cron';
+import fs from 'fs';
 import {
     google
 } from 'googleapis';
@@ -76,11 +80,11 @@ function* init() {
         return result;
     }
 
-    // Establish success marker for script.
+    // Set marker for task completion.
     let success = false;
 
     for (let i = 0; i < emails.length; i + 1) {
-        success = false;
+
         const emailLinks = parse(emails[i].body.html)
             .querySelectorAll('a');
         let targetLink = '';
@@ -99,38 +103,41 @@ function* init() {
 
         if (isQuote) {
             yield nightmare.evaluate(() => {
-                    let message = settings.defaultMessage;
-                    const student = {
+                    const contact = {
+                        defaultQuoteRemote: '60',
+                        defaultQuoteInPerson: '100',
                         name: '',
                         city: '',
+                        message: 'Dear <<CLIENT_NAME>>,\n\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\n\nWe offer in-person tutoring in <<CLIENT_CITY>> for $<<QUOTE_IN_PERSON>>/hour, and Skype tutoring at the more affordable rate of $<<QUOTE_REMOTE>>/hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?',
                     };
 
                     // Get the student name and reduce to the first name only.
                     const studentName = document.querySelector('.client-lead-customer .media-heading')
                         .innerText;
-                    student.name = studentName.replace(/( [A-Z]\.)/, '');
+                    contact.name = studentName.replace(/( [A-Z]\.)/, '');
 
                     // Get the student city and reduce it to the city name only (hopefully).
                     const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
                         .innerText;
-                    student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+                    contact.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
 
                     // Place variables into message.
-                    message = message.replace(/<<CLIENT_NAME>>/, student.name);
-                    message = message.replace(/<<CLIENT_CITY>>/, student.city);
-                    message = message.replace(/<<QUOTE_IN_PERSON>>/, settings.defaultQuoteInPerson);
-                    message = message.replace(/<<QUOTE_REMOTE>>/, settings.defaultQuoteRemote);
+                    contact.message = contact.message.replace(/<<CLIENT_NAME>>/, contact.name);
+                    contact.message = contact.message.replace(/<<CLIENT_CITY>>/, contact.city);
+                    contact.message = contact.message.replace(/<<QUOTE_IN_PERSON>>/, contact.defaultQuoteInPerson);
+                    contact.message = contact.message.replace(/<<QUOTE_REMOTE>>/, contact.defaultQuoteRemote);
 
-                    return message;
+                    return contact;
                 })
-                .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteRemote)
-                    .insert('#quote-message', result)
+                .then((result) => nightmare
+                    .insert('#quote-price', result.defaultQuoteRemote)
+                    .insert('#quote-message', result.message)
                     .wait(2000)
                     .click('#send-quote')
                     .wait('#template-content')
                     .wait(2000));
 
-            // If finished for this case, mark it as successful.
+            // Flip success marker if finished.
             success = true;
         } else if (!(isQuote) && (nightmare.url() !== 'https://tutors.com/pros/requests')) {
             yield nightmare
@@ -158,32 +165,34 @@ function* init() {
                                 .wait(3000)
                                 .wait('#send-quote')
                                 .evaluate(() => {
-                                    let message = settings.defaultMessage;
-                                    const student = {
+                                    const contact = {
+                                        defaultQuoteRemote: '60',
+                                        defaultQuoteInPerson: '100',
                                         name: '',
                                         city: '',
+                                        message: 'Dear <<CLIENT_NAME>>,\n\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\n\nWe offer in-person tutoring in <<CLIENT_CITY>> for $<<QUOTE_IN_PERSON>>/hour, and Skype tutoring at the more affordable rate of $<<QUOTE_REMOTE>>/hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?',
                                     };
 
                                     // Get the student name and reduce to the first name only.
                                     const studentName = document.querySelector('.client-lead-customer .media-heading')
                                         .innerText;
-                                    student.name = studentName.replace(/( [A-Z]\.)/, '');
+                                    contact.name = studentName.replace(/( [A-Z]\.)/, '');
 
                                     // Get the student city and reduce it to the city name only (hopefully).
                                     const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
                                         .innerText;
-                                    student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+                                    contact.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
 
                                     // Place variables into message.
-                                    message = message.replace(/<<CLIENT_NAME>>/, student.name);
-                                    message = message.replace(/<<CLIENT_CITY>>/, student.city);
-                                    message = message.replace(/<<QUOTE_IN_PERSON>>/, settings.defaultQuoteInPerson);
-                                    message = message.replace(/<<QUOTE_REMOTE>>/, settings.defaultQuoteRemote);
+                                    contact.message = contact.message.replace(/<<CLIENT_NAME>>/, contact.name);
+                                    contact.message = contact.message.replace(/<<CLIENT_CITY>>/, contact.city);
+                                    contact.message = contact.message.replace(/<<QUOTE_IN_PERSON>>/, contact.defaultQuoteInPerson);
+                                    contact.message = contact.message.replace(/<<QUOTE_REMOTE>>/, contact.defaultQuoteRemote);
 
-                                    return message;
+                                    return contact;
                                 })
-                                .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteRemote)
-                                    .insert('#quote-message', result)
+                                .then((result) => nightmare.insert('#quote-price', result.defaultQuoteRemote)
+                                    .insert('#quote-message', result.message)
                                     .wait(2000)
                                     .click('#send-quote')
                                     .wait('#template-content')
@@ -192,7 +201,7 @@ function* init() {
                     }
                 });
 
-            // If finished for this case, mark it as successful.
+            // Flip success marker if finished.
             success = true;
         }
 
@@ -219,32 +228,34 @@ function* init() {
                                 .wait(3000)
                                 .wait('#send-quote')
                                 .evaluate(() => {
-                                    let message = settings.defaultMessage;
-                                    const student = {
+                                    const contact = {
+                                        defaultQuoteRemote: '60',
+                                        defaultQuoteInPerson: '100',
                                         name: '',
                                         city: '',
+                                        message: 'Dear <<CLIENT_NAME>>,\n\n\nI am Adam Shlomi, the founder of SoFlo SAT Tutoring. I scored an 800 on the Reading section and 770 on Math, went to Georgetown University, and have 5 years of tutoring experience. We analyze your child’s strengths and weaknesses through a free diagnostic test and then create a personalized strategy that will focus on their weak points and teach the tricks of the SAT/ACT.\n\n\nWe offer in-person tutoring in <<CLIENT_CITY>> for $<<QUOTE_IN_PERSON>>/hour, and Skype tutoring at the more affordable rate of $<<QUOTE_REMOTE>>/hour. Do you have time today or tomorrow for a quick call so I can learn more about your child and share my background?',
                                     };
 
                                     // Get the student name and reduce to the first name only.
                                     const studentName = document.querySelector('.client-lead-customer .media-heading')
                                         .innerText;
-                                    student.name = studentName.replace(/( [A-Z]\.)/, '');
+                                    contact.name = studentName.replace(/( [A-Z]\.)/, '');
 
                                     // Get the student city and reduce it to the city name only (hopefully).
                                     const studentCity = document.querySelector('.client-lead-customer  .client-lead-customer-info')
                                         .innerText;
-                                    student.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
+                                    contact.city = studentCity.replace(/(, [A-Z]{2})(.*)/, '');
 
                                     // Place variables into message.
-                                    message = message.replace(/<<CLIENT_NAME>>/, student.name);
-                                    message = message.replace(/<<CLIENT_CITY>>/, student.city);
-                                    message = message.replace(/<<QUOTE_IN_PERSON>>/, settings.defaultQuoteInPerson);
-                                    message = message.replace(/<<QUOTE_REMOTE>>/, settings.defaultQuoteRemote);
+                                    contact.message = contact.message.replace(/<<CLIENT_NAME>>/, contact.name);
+                                    contact.message = contact.message.replace(/<<CLIENT_CITY>>/, contact.city);
+                                    contact.message = contact.message.replace(/<<QUOTE_IN_PERSON>>/, contact.defaultQuoteInPerson);
+                                    contact.message = contact.message.replace(/<<QUOTE_REMOTE>>/, contact.defaultQuoteRemote);
 
-                                    return message;
+                                    return contact;
                                 })
-                                .then((result) => nightmare.insert('#quote-price', settings.defaultQuoteRemote)
-                                    .insert('#quote-message', result)
+                                .then((result) => nightmare.insert('#quote-price', result.defaultQuoteRemote)
+                                    .insert('#quote-message', result.message)
                                     .wait(2000)
                                     .click('#send-quote')
                                     .wait('#template-content')
@@ -253,7 +264,7 @@ function* init() {
                     }
                 });
 
-            // If finished for this case, mark it as successful.
+            // Flip success marker if finished.
             success = true;
         }
 
@@ -287,7 +298,7 @@ function* init() {
         console.dir(reply);
     });
 
-    const result = 'An unexpected page was encountered (either a website server error, payment page, or otherwise). An email has been sent to the owner.';
+    const result = 'There was an issue with the current round of email (payment required, server error, etc.). The admin has been notified.';
 
     return result;
 }
@@ -299,8 +310,19 @@ function* init() {
  * -----------------------------------------------------------------------------
  */
 
-vo(init)((err, result) => {
-    if (err) throw err;
+// Script runs periodically
+const job = new CronJob('*/10 * * * *', () => {
+    console.log('---------------------');
+    console.log('Checking emails for new Tutors messages to reply to...');
 
-    console.log(result);
-});
+    vo(init)((err, result) => {
+        if (err) throw err;
+
+        console.log(result);
+    });
+
+    console.log('Finished running the job!');
+    console.log('---------------------');
+}, null, false, 'America/New_York', null, true);
+
+job.start();
