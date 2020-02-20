@@ -66,7 +66,7 @@ const getEmails = () => gmail.get_messages(
 function* init() {
     // Initialize Nightmare
     const nightmare = new Nightmare({
-        show: true,
+        show: false,
         maxHeight: 1080,
         maxWidth: 1920,
     });
