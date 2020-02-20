@@ -1,21 +1,5 @@
 /**
  * -----------------------------------------------------------------------------
- * Tutors.com / Gmail Autoresponder
- *
- * Licensed under GPL v3.0:
- * https://github.com/jdaio/tutors-autoresponder/blob/master/LICENSE
- *
- * @license GPL-3.0-or-later
- *
- * @author Jamal Ali-Mohammed <https://digitalheat.co>
- *
- * @version 1.0.0
- * -----------------------------------------------------------------------------
- */
-
-
-/**
- * -----------------------------------------------------------------------------
  * Module & Settings Import
  * -----------------------------------------------------------------------------
  */
@@ -63,10 +47,10 @@ const getEmails = () => gmail.get_messages(
  * -----------------------------------------------------------------------------
  */
 
-function* init() {
+function* run() {
     // Initialize Nightmare
     const nightmare = new Nightmare({
-        show: false,
+        show: true,
         maxHeight: 1080,
         maxWidth: 1920,
     });
@@ -311,18 +295,16 @@ function* init() {
  */
 
 // Script runs periodically
-const job = new CronJob('*/10 * * * *', () => {
+const job = new CronJob('*/10 * * * *', vo(run)((err, result) => {
     console.log('---------------------');
     console.log('Checking emails for new Tutors messages to reply to...');
 
-    vo(init)((err, result) => {
-        if (err) throw err;
+    if (err) throw err;
 
-        console.log(result);
-    });
-
+    console.log(result);
+}), () => {
     console.log('Finished running the job!');
     console.log('---------------------');
-}, null, false, 'America/New_York', null, true);
+}, false, 'America/New_York', null, true);
 
 job.start();
