@@ -15,5 +15,5 @@ module.exports = {
     /**
      * Admin Information
      */
-    adminEmail: 'jamal.ali.mohammed@gmail.com', // Email the server mail is sent to.
+    adminEmail: 'admin@example.com', // Email the server mail is sent to.
 };
