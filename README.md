@@ -95,15 +95,15 @@ Hi <<CLIENT_NAME>>,\n\n\nWe have tutoring in <<CLIENT_CITY>> available for $<<QU
 
 ## To Do Checklist
 
--   [ ] -   Refactor code because right now it's a mess.
--   [ ] -   Develop a more sane method of handling message strings for easier customization.
--   [ ] -   Fix the initial missing token.json bug when creating a new token to write to (instead of an existing blank file).
--   [ ] -   Switch to Puppeteer for the script instead of relying on XVFB and Electron with Nightmare. It should result in a lighter weight and faster script.
--   [ ] -   Clean up gmail API interactions.
--   [ ] -   Structure conditional loops more efficiently.
--   [ ] -   Implement more informative error handling alerts for administrative emails.
--   [ ] -   Implement Gmail 0Auth for nodemailer.
--   [ ] -   Improve handling of secure credentials.
+-   [ ] Refactor code because right now it's a mess.
+-   [ ] Develop a more sane method of handling message strings for easier customization.
+-   [ ] Fix the initial missing token.json bug when creating a new token to write to (instead of an existing blank file).
+-   [ ] Switch to Puppeteer for the script instead of relying on XVFB and Electron with Nightmare. It should result in a lighter weight and faster script.
+-   [ ] Clean up gmail API interactions.
+-   [ ] Structure conditional loops more efficiently.
+-   [ ] Implement more informative error handling alerts for administrative emails.
+-   [ ] Implement Gmail 0Auth for nodemailer.
+-   [ ] Improve handling of secure credentials.
 
 ## License
 
