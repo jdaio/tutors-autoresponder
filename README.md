@@ -4,7 +4,7 @@
 
 A NodeJS script for automatically replying to Tutors.com job requests sent to your Gmail inbox.
 
-**Note:** This version of the script was developed as a proof-of-concept rather than a final product. It 100% has bugs. The more prevalent issues will be improved in future releases.
+**Note: _This version of the script was developed as a proof-of-concept rather than a final product. It 100% has bugs. The more prevalent issues will be improved in future releases._**
 
 ## How to Get Started
 
